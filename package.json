@@ -1,0 +1,22 @@
+{
+  "name": "saralsy-final-project",
+  "version": "1.0.0",
+  "description": "## Overview The website allows you to upload any picture / existing art you have and turns it into NFT that can be sold or exchanged on the marketplace.",
+  "main": "db.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nyu-csci-ua-0467-001-fall-2021/saralsy-final-project.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nyu-csci-ua-0467-001-fall-2021/saralsy-final-project/issues"
+  },
+  "homepage": "https://github.com/nyu-csci-ua-0467-001-fall-2021/saralsy-final-project#readme",
+  "dependencies": {
+    "mongoose": "^6.0.11"
+  }
+}
