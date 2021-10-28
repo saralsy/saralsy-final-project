@@ -17,6 +17,10 @@
   },
   "homepage": "https://github.com/nyu-csci-ua-0467-001-fall-2021/saralsy-final-project#readme",
   "dependencies": {
-    "mongoose": "^6.0.11"
+    "express": "^4.17.1",
+    "hbs": "^4.1.2",
+    "mongoose": "^6.0.12",
+    "mongoose-url-slugs": "^1.0.2",
+    "nodemon": "^2.0.14"
   }
 }
