@@ -2,9 +2,16 @@
   "name": "saralsy-final-project",
   "version": "1.0.0",
   "description": "## Overview The website allows you to upload any picture / existing art you have and turns it into NFT that can be sold or exchanged on the marketplace.",
-  "main": "db.js",
+  "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node app.js",
+    "web": "node app.js",
+    "build": "webpack",
+    "heroku-postbuild": "echo Skip build on Heroku"
+  },
+  "engines": {
+    "node": "14.17.6"
   },
   "repository": {
     "type": "git",
@@ -22,5 +29,6 @@
     "mongoose": "^6.0.12",
     "mongoose-url-slugs": "^1.0.2",
     "nodemon": "^2.0.14"
-  }
+  },
+  "heroku-run-build-script": true
 }
