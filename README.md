@@ -78,6 +78,7 @@ An Example List with Embedded Art:
     * Solidity frameworks handle payment and bidding for the art/drops
 * (5 points) front-end React Native framework
     * React Native provides multi-platform front-end components that I can use for login, signup 
+* (3 points) Using Multer to upload files to MongoDB
 
 ## Annotations / References Used
 1. [Middleware and Form Coding Demo](https://cs.nyu.edu/courses/fall21/CSCI-UA.0467-001/_site/examples/class09/middleware-forms.zip) - boilerplate referenced to start app.js

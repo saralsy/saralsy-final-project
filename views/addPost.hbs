@@ -1,0 +1,13 @@
+
+{{#each posts}}
+<div>
+    <h4>{{title}}</h4>
+    <p>{{content}}</p>
+</div>
+{{/each}}
+<p style="text-align: center;">Send a post</p>
+<form action="/post" method="POST" style="text-align: center;"> 
+    <input type="text" name="title" placeholder="title of post"> by 
+    <input type="text" name="content" placeholder="what you would like to share">
+    <input type="submit" value="Add">
+</form>
