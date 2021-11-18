@@ -43,3 +43,7 @@ button {
 	height: 600px;
 	object-fit: cover;
 }
+
+.form-label {
+	font-size:15px;
+}

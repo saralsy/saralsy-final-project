@@ -1,15 +1,25 @@
 // 1st Draft Data Model
 const mongoose = require('mongoose');
 const MongoClient = require('mongodb').MongoClient;
+const passportLocalMongoose = require('passport-local-mongoose');
+
 require("dotenv").config(); 
 
 // users
 // authentication plugin provides username and password hash
 const User = new mongoose.Schema({
-    lists: [{type: mongoose.Schema.Types.ObjectId, ref:'Art'}],
-    wallet: {type: String, required: true},
-    artSold: {type: Number, default: 0, required: true}
-})
+
+    // lists: [{type: mongoose.Schema.Types.ObjectId, ref:'Art'}],
+    // wallet: {type: String},
+    // artSold: {type: Number, default: 0, required: true}
+}, {
+    writeConcern: {
+       w: 'majority',
+    }
+});
+
+// Passport local mongoose will add properties to the schema, as well as some static methods
+User.plugin(passportLocalMongoose);
 
 // art pieces
 // TODO: add default date
@@ -50,3 +60,6 @@ mongoose.connect(
         useUnifiedTopology: true
     }
 );
+
+
+module.exports = mongoose.model('User', User);

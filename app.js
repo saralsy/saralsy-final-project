@@ -1,13 +1,25 @@
 const express = require('express');
 const path = require('path');
-const db = require('./db');
 const hbs = require('hbs');
 const mongoose = require('mongoose');
 const session = require('express-session');
+require('./db');
+require('./auth');
+const passport = require('passport');
+const LocalStrategy = require('passport-local').Strategy;
+const flash = require('connect-flash');
+
 require("dotenv").config(); 
-const bodyParser = require('body-parser');
 const app = express();
 app.set('view engine', 'hbs');
+
+mongoose.Promise = global.Promise;
+mongoose.connect(process.env.MONGODB_URI); // saved in heroku config
+
+const User = mongoose.model('User');
+const Art = mongoose.model('Art');
+const List = mongoose.model('List');
+const Post = mongoose.model('Post');
 
 const publicPath = path.join(__dirname, 'public');
 app.use(express.json());
@@ -17,9 +29,18 @@ app.use(express.urlencoded({
 })); 
 app.use(session({
   secret: 'secret for signing session id',
-  resave: false,
+  resave: true,
   saveUninitialized: true,
 }));
+
+
+passport.use(new LocalStrategy(User.authenticate()));
+// use static serialize and deserialize of model for passport session support
+passport.serializeUser(User.serializeUser());
+passport.deserializeUser(User.deserializeUser());
+app.use(passport.initialize());
+app.use(passport.session());
+app.use(flash());
 
 const logger = (req, res, next) => {
   console.log(req.method, req.path, req.query);
@@ -40,10 +61,52 @@ app.use((req, res, next) => {
 });
 
 app.use(express.urlencoded({extended: false}));
+
+app.use(function(req, res, next){
+	res.locals.user = req.user;
+	next();
+});
 // this gives us access to req.body
 // req.body contains the parsed http request
 // body (assuming it's in urlencoded format:
 // name=val&name2=val2
+
+passport.serializeUser(function(username, done) {
+	done(null, user.username);
+});
+
+passport.deserializeUser(function(username, done) {
+	User.findOne({username:username}, function(err, user) {
+    console.log("found");
+		done(err, user);
+	});
+});
+
+
+// passport.use(
+//   new LocalStrategy({usernameField: "username"}, (username, password, done)=>{
+//     User.findOne({username: username})
+//         .then(user => 
+          
+//           bcrypt.compare(password, user.password), (err, isMatch)=>{
+//             console.log("found");
+//           if(err) throw err;
+//           if(isMatch){
+//             console.log('found user');
+//             return done(null, user);
+//           } else {
+//             console.log('didnt find');
+//             return done(null, false, {message: 'invalid username or password'} )
+//           }
+//         })
+//         .catch(err => {
+//           return done(null, false, {message: err});
+//         })
+//   })
+// )
+
+// make user data available to all templates, adding properties to res.locals
+
 
 hbs.handlebars.registerHelper('if_even', function(conditional, options) {
   if((conditional % 2) == 0) {
@@ -57,23 +120,71 @@ hbs.handlebars.registerHelper('if_odd', function(conditional, options) {
   } 
 });
 
-mongoose.Promise = global.Promise;
-mongoose.connect(process.env.MONGODB_URI); // saved in heroku config
+app.get('/', (req, res)=>{
+  console.log("req.user", req.user);
+  res.render('landing', {user: req.user});
+  // Art.find({}, (err, arts)=>{
+  //   if(err){
+  //     console.log(err);
+  //   }
+  //   console.log('showing all the pieces', arts);
+  //   res.render('landing', {arts});
+  // })
+});
 
-const User = mongoose.model('User');
-const Art = mongoose.model('Art');
-const List = mongoose.model('List');
-const Post = mongoose.model('Post');
+app.get('/signup', (req, res)=>{
+  res.render('signup');
+})
 
-// route handler
-// it responds to a an http request based on method (GET) and path (/)
-// ... use get to add rourtes, first argument is path
-// second arg is callback... that will get called when a request to GET /
-// comes in ...it will be invoked with a request and response object
-// an instance of Request: path, method, query, params, body *, get (for headers)
-// an instance of Response: status(), send(), sendFile(), ... render()
-// one of the methods above must be called to end the req/res cycle ^^^
-app.get('/all', (req, res) => {
+app.post('/signup', function(req, res) {
+  User.register(new User({username:req.body.username}), 
+      req.body.password, function(err, user){
+    if (err) {
+      console.log(err);
+      console.log(req.body);
+      res.render('signup',{message:'Your registration information is not valid'});
+    } else {
+      passport.authenticate('local')(req, res, function() {
+        console.log('user signed up!');
+        console.log('after signup', req.user);
+        res.redirect('/');
+      });
+    }
+  });   
+});
+
+
+app.get('/login', (req, res) => {
+  res.render('login', {user: req.user, message: req.flash('error')});
+});
+
+app.post('/login', passport.authenticate('local', 
+  {failureRedirect: '/login', 
+    failureFlash: true}), 
+  function(req, res) {
+    res.redirect('/');
+});
+
+app.get('/logout', function(req, res) {
+  req.logout();
+  res.redirect('/');
+});
+
+// app.post('/login', function(req,res,next) {
+//   passport.authenticate('local', function(err,user) {
+//     console.log('login user', user);
+//     if(user) {
+//       req.logIn(user, function(err) {
+//         res.redirect('/');
+//       });
+//     } else {
+//       console.log(err);
+//       res.render('login', {message:'Your login or password is incorrect.'});
+//     }
+//   })(req, res, next);
+// });
+
+app.get('/all', async (req, res) => {
   Art.find({}, (err, arts)=>{
     console.log('showing all the pieces', arts);
     res.render('home', {arts});
@@ -139,9 +250,6 @@ app.post('/', (req, res)=>{
   res.send('<h1>received</h1>');
 })
 
-app.get('/login', (req, res) => {
-  res.render('login');
-});
 
 app.post('/action', (req, res) => {
   console.log('got this body', req.body);
