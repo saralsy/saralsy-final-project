@@ -8,7 +8,7 @@
     "start": "node app.js",
     "web": "node app.js",
     "build": "webpack",
-    "heroku-postbuild": "echo Skip build on Heroku"
+    "heroku-postbuild": "mkdir uploads && echo Skip build on Heroku"
   },
   "engines": {
     "node": "14.17.6"
