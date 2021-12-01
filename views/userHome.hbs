@@ -1,16 +1,16 @@
-<script src="https://js.stripe.com/v3/"></script>
-<script src="card.js"></script>
-{{#if arts}}
-<h3>Showing all the existing drops</h3>
 
-<form class="input-group rounded" action="/search" method="POST">
+
+{{#if arts}}
+<h3>Showing all the existing drops made by you!</h3>
+
+{{!-- <form class="input-group rounded" action="/search" method="POST">
     <input type="search" name="search" class="form-control rounded" placeholder="Search" aria-label="Search"
     aria-describedby="search-addon" />
     <button class="input-group-text border-0" name="search" id="search-addon">
       <i class="fas fa-search"></i>
     </button>
     {{ message }}
-</form>
+</form> --}}
 
 <div class="row row-cols-1 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 row-cols-xl-6">
      {{#each arts}}
@@ -23,8 +23,7 @@
             <p class="imgTag">Tag: {{tag}}</p>
             {{/if}}
             <div class="mt-auto">
-              <!-- Button trigger purchase modal -->
-              <button href="#" class="btn btn-primary" data-toggle="modal" data-target="#buyModal">Buy ${{ price }}.00</button>
+              <a href="#" class="btn btn-primary">Buy ${{ price }}.00</a>
               <a href="/delete?title={{title}}" class="btn btn-secondary">Delete</a>
             </div>
             
@@ -72,34 +71,3 @@
 <button type="submit" name="submit" class="btn btn-primary">Submit</button>
 </form>
 {{/if}}
-
-<!-- Purchase Modal -->
-<div class="modal fade" id="buyModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="exampleModalLabel">Purchase this drop</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      <div class="modal-body">
-        <form id="paymentForm" action="/charge" method="POST">
-          <input class="bg-light text-dark border-white p-2 h-10 mb-4" type="text" name="name" placeholder="Name">
-          <input type="email" class="bg-light border-white text-dark p-2 h-10 mb-4" name="email" placeholder="Email">
-          <input class="bg-light border-white text-dark p-2 h-10 mb-4" type="text" name="amount" placeholder="Amount">
-          <div id="card-element" class="bg-light text-dark p-2 h-10 mb-4"></div>
-          <div id="card-errors" role="alert"></div>
-          <button type="submit" class="btn btn-primary">Submit payment</button>
-          </form>
-
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-        
-      </div>
-      
-        
-    </div>
-  </div>
-</div>

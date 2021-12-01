@@ -1,17 +1,36 @@
 const express = require('express');
 const path = require('path');
 const hbs = require('hbs');
+require('./db');
 const mongoose = require('mongoose');
 const session = require('express-session');
-require('./db');
+// upload images using multer
+const multer  = require('multer');
+const Stripe = require('stripe');
+const stripe = Stripe(process.env.STRIPE);
+const {GridFsStorage} = require('multer-gridfs-storage');
+const storage = multer.diskStorage({
+  destination: function(req, file, cb) {
+     cb(null, 'uploads')
+  },
+  filename: function(req, file, cb) {
+     cb(null, new Date().toISOString() + file.originalname)
+  }
+}) 
+// Create a storage object with a given configuration
+
+// Set multer storage engine to the newly created object
+const upload = multer({ storage });
+
+const fs = require('fs');
 require('./auth');
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 const flash = require('connect-flash');
-
+ 
 require("dotenv").config(); 
 const app = express();
-app.set('view engine', 'hbs');
+app.set('view engine', 'hbs');  
 
 mongoose.Promise = global.Promise;
 mongoose.connect(process.env.MONGODB_URI); // saved in heroku config
@@ -24,6 +43,7 @@ const Post = mongoose.model('Post');
 const publicPath = path.join(__dirname, 'public');
 app.use(express.json());
 app.use(express.static(publicPath));
+app.use('/uploads', express.static(__dirname + '/uploads'));
 app.use(express.urlencoded({
   extended: true
 })); 
@@ -32,7 +52,6 @@ app.use(session({
   resave: true,
   saveUninitialized: true,
 }));
-
 
 passport.use(new LocalStrategy(User.authenticate()));
 // use static serialize and deserialize of model for passport session support
@@ -49,9 +68,6 @@ const logger = (req, res, next) => {
 
 app.use(logger);
 
-// middleware that checks the Host: header of an http request
-// if it exists OK!... go on to next middleware or route
-// if it doesn't exist, send back a 400
 app.use((req, res, next) => {
   if(req.get('Host')) {
     next();
@@ -66,10 +82,6 @@ app.use(function(req, res, next){
 	res.locals.user = req.user;
 	next();
 });
-// this gives us access to req.body
-// req.body contains the parsed http request
-// body (assuming it's in urlencoded format:
-// name=val&name2=val2
 
 passport.serializeUser(function(username, done) {
 	done(null, user.username);
@@ -82,43 +94,6 @@ passport.deserializeUser(function(username, done) {
 	});
 });
 
-
-// passport.use(
-//   new LocalStrategy({usernameField: "username"}, (username, password, done)=>{
-//     User.findOne({username: username})
-//         .then(user => 
-          
-//           bcrypt.compare(password, user.password), (err, isMatch)=>{
-//             console.log("found");
-//           if(err) throw err;
-//           if(isMatch){
-//             console.log('found user');
-//             return done(null, user);
-//           } else {
-//             console.log('didnt find');
-//             return done(null, false, {message: 'invalid username or password'} )
-//           }
-//         })
-//         .catch(err => {
-//           return done(null, false, {message: err});
-//         })
-//   })
-// )
-
-// make user data available to all templates, adding properties to res.locals
-
-
-hbs.handlebars.registerHelper('if_even', function(conditional, options) {
-  if((conditional % 2) == 0) {
-    return options.fn(this);
-  } 
-});
-
-hbs.handlebars.registerHelper('if_odd', function(conditional, options) {
-  if((conditional % 2) != 0) {
-    return options.fn(this);
-  } 
-});
 
 app.get('/', (req, res)=>{
   console.log("req.user", req.user);
@@ -170,43 +145,67 @@ app.get('/logout', function(req, res) {
   res.redirect('/');
 });
 
-// app.post('/login', function(req,res,next) {
-//   passport.authenticate('local', function(err,user) {
-//     console.log('login user', user);
-//     if(user) {
-//       req.logIn(user, function(err) {
-//         res.redirect('/');
-//       });
-//     } else {
-//       console.log(err);
-//       res.render('login', {message:'Your login or password is incorrect.'});
-//     }
-//   })(req, res, next);
-// });
-
 app.get('/all', async (req, res) => {
-  Art.find({}, (err, arts)=>{
+  // find all the non-private drops
+  Art.find({private:{$ne: true}}, (err, arts)=>{
     console.log('showing all the pieces', arts);
     res.render('home', {arts});
   })
 });
 
+function searchDrop(obj, kw){
+  return obj['title'].includes(kw) || obj['tag'].includes(kw) || obj['user'].includes(kw);
+}
+
+// finding drops with keyword
+app.post('/search', (req, res)=>{
+  Art.find({private:{$ne: true}}, (err, arts)=>{
+    const kw = req.body.search[0];
+    console.log(kw);
+    const result = arts.filter(obj => searchDrop(obj, kw));
+    if(!result){
+      return res.render('home', {arts, message: 'no Drop found that fits in the search criteria'});
+    }
+    res.render('home', {arts: result});
+  })
+  
+});
+
+// get drops that belong to the user
+app.get('/user/:username', (req, res)=>{
+  console.log("finding", req.user.username);
+  Art.find({user: req.user.username}, (err, arts)=>{
+    res.render('userHome', {arts});
+  })
+});
+
 app.get('/create', (req, res)=>{
+  if(!req.user){
+    return res.render('login', {user: req.user, message: 'Please login to create Drop!'});
+  }
   res.render('create');
 });
 
-app.post('/add', (req, res)=>{
+// upload image to the gallery
+app.post('/add', upload.single('image'), (req, res, next)=>{
   console.log('adding', req.body);
+  // alert they have to sign in to create
+ console.log('req.file', req.file);
   const newArt = new Art({
+    // user: req.user.username,
     title: req.body.name,
-    category: req.body.tag,
-    // fileId: req.body.fileId
+    tag: req.body.tag,
+    createdAt: new Date(),
+    price: req.body.price,
+    img: req.file.path,
+    user: req.user.username,
+    private: req.body.private,
   })
   newArt.save((err, post)=>{
     console.log("after form", req.body);
     console.log('saved', post);
     res.redirect('/all');
-  })
+  })  
 });
 
 app.get('/delete', (req, res)=>{
@@ -220,85 +219,28 @@ app.get('/delete', (req, res)=>{
   res.redirect('/all');
 });
 
-
-app.get('/post', (req, res)=>{
-  Post.find({}, (err, posts)=>{
-    console.log(posts);
-    res.render('addPost', {posts});
-  })
-})
-
-app.post('/post', (req, res)=>{
-  const newPost = new Post({
-    title: req.body.title,
-    content: req.body.content
-  })
-  newPost.save((err, post)=>{
-    console.log('saved', post);
-    res.redirect('/');
-  })
-})
-
-
-app.post('/', (req, res)=>{
-  const newFile = new Art({
-    title: req.body.title
-  });
-  newFile.save((err, result)=>{
-    console.log("art saved", result);
-  })
-  res.send('<h1>received</h1>');
-})
-
-
-app.post('/action', (req, res) => {
-  console.log('got this body', req.body);
-  res.redirect('/form');
+app.post("/charge", (req, res) => {
+  try {
+    console.log("/charge", req.body);
+    stripe.customers
+      .create({
+        name: req.body.name,
+        email: req.body.email,
+        source: req.body.stripeToken
+      })
+      .then(customer =>
+        stripe.charges.create({
+          amount: req.body.amount * 100,
+          currency: "usd",
+          customer: customer.id,
+        })
+      )
+      .then(() => res.render('completed'))
+      .catch(err => console.log(err));
+  } catch (err) {
+    res.send(err);
+  }
 });
-
-app.get('/product', (req, res) => {
-  const num1 = parseInt(req.query.num1);
-  const num2 = parseInt(req.query.num2);
-  const product = num1 * num2;
-  console.log(product);
-  res.render('calculate', {result: product});
-  // res.status(200).send(isNaN(product) ? 'not a number' : '' + product);
-});
-
-
-
-app.get("/api/movie", function (req, res) {
-  MongoClient.connect(uri, function(err, client){
-    if(err) throw err
-    const db = client.db('sample_mfix').findOne().toArray(function (err, result){
-      if(err) throw err
-      console.log(result);
-    })
-  })
-});
-
-app.get('/pb', (req, res) => {
-
-  const shows = [
-    {name: 'at', year:2012},
-    {name: 'gravity falls'}
-  ];
-
-  const kingdoms = {
-    'candy': 'pb', 
-    'ice': 'ice king', 
-  };
-  const context = {
-    character1: 'princess bubblegum!!!!!!!',
-    character2: 'peppermint butler',
-    favs: ['pb', 'pepbut', 'magic man'],
-    places: kingdoms,
-    shows: shows
-  };
-  res.render('pb', context);
-});
-
-
 
 app.listen(process.env.PORT || 3000);
 

@@ -22,15 +22,17 @@ const User = new mongoose.Schema({
 User.plugin(passportLocalMongoose);
 
 // art pieces
-// TODO: add default date
 const Art = new mongoose.Schema({
     title: {type: String, required: true},
     tag: {type:String}, 
+    // user: {type: String, required: true},
     // user: {type: mongoose.Schema.Types.ObjectId, ref:'User'},
     // category: [{type: mongoose.Schema.Types.ObjectId, ref:'List'}],
-    // createdAt: {type: Date},
-    // price: {type: Number, min: 0},
-    // public: {type: Boolean, default: false, required: true},
+    createdAt: {type: Date},
+    price: {type: Number, default: 0, min: 0},
+    img: {type: String},
+    user: {type: String},
+    private: {type: Boolean, default: false, required: true},
     // sold: {type: Boolean, default: false},
     // fileId: {type: String}
 })
